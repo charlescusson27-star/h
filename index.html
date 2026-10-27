@@ -7,10 +7,26 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --custom-btn-bg: #d97706; /* amber-600 par défaut */
+            --custom-card-bg: rgba(10, 10, 10, 0.9);
+            --custom-border-color: rgba(245, 158, 11, 0.4);
+        }
+        .dyn-btn { background-color: var(--custom-btn-bg) !important; }
+        .dyn-btn:hover { filter: brightness(1.15); }
+        .dyn-card { background-color: var(--custom-card-bg) !important; border-color: var(--custom-border-color) !important; }
+    </style>
 </head>
-<body id="body-theme" class="bg-stone-950 text-amber-50 h-full flex flex-col font-sans selection:bg-amber-500 selection:text-white transition-all duration-500 bg-cover bg-center bg-fixed">
+<body id="body-theme" class="bg-stone-950 text-amber-50 h-full flex flex-col font-sans selection:bg-amber-500 selection:text-white transition-all duration-500 bg-cover bg-center bg-fixed relative overflow-hidden">
 
-    <div id="app" class="h-full flex flex-col flex-1 backdrop-blur-sm bg-black/60">
+    <!-- Fond Vidéo Optionnel -->
+    <div id="video-bg-container" class="hidden fixed inset-0 z-0 overflow-hidden pointer-events-none"></div>
+
+    <!-- Lecteur Audio de Fond (Caché ou Discret) -->
+    <audio id="bg-audio" loop class="hidden"></audio>
+
+    <div id="app" class="h-full flex flex-col flex-1 backdrop-blur-sm bg-black/60 z-10 relative overflow-hidden">
         <div class="flex-1 flex items-center justify-center p-4 text-center">
             <div class="space-y-3">
                 <div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -21,11 +37,11 @@
 
     <!-- Modal Visionneuse / Aperçu grand format -->
     <div id="file-viewer-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
-        <div class="w-full max-w-5xl h-[85vh] bg-stone-950 border border-amber-500/40 rounded-3xl p-6 shadow-2xl flex flex-col space-y-4">
+        <div class="w-full max-w-5xl h-[85vh] dyn-card border rounded-3xl p-6 shadow-2xl flex flex-col space-y-4">
             <div class="flex justify-between items-center border-b border-amber-900/40 pb-3">
                 <h3 id="viewer-title" class="font-black text-lg text-amber-400">Aperçu du Document</h3>
                 <div class="flex gap-2 items-center">
-                    <a id="viewer-download-btn" href="#" download class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-download"></i> Télécharger</a>
+                    <a id="viewer-download-btn" href="#" download class="px-3 py-1.5 dyn-btn text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-download"></i> Télécharger</a>
                     <button onclick="toggleModal('file-viewer-modal', false)" class="text-amber-200/70 hover:text-white p-2"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
             </div>
@@ -35,37 +51,8 @@
         </div>
     </div>
 
-    <!-- Modal Canva / Créateur de Thème -->
-    <div id="theme-canvas-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="w-full max-w-lg bg-stone-950 border border-amber-500/40 rounded-3xl p-6 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-amber-900/40 pb-3">
-                <h3 class="font-black text-base text-amber-400"><i class="fa-solid fa-paintbrush mr-2"></i>Thème Personnalisé (Canva / Image Web)</h3>
-                <button onclick="toggleModal('theme-canvas-modal', false)" class="text-amber-200/70 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block font-bold text-amber-200 mb-1">Nom du thème</label>
-                    <input type="text" id="canvas-theme-name" placeholder="Ex: Fond Canva Automne" class="w-full px-3 py-2 bg-stone-900 border border-amber-900/40 rounded-xl text-amber-100">
-                </div>
-                <div>
-                    <label class="block font-bold text-amber-200 mb-1">URL de l'image de fond</label>
-                    <input type="url" id="canvas-theme-bg" placeholder="https://images.unsplash.com/..." class="w-full px-3 py-2 bg-stone-900 border border-amber-900/40 rounded-xl text-amber-100">
-                </div>
-            </div>
-            <div class="flex justify-between items-center pt-3 border-t border-amber-900/40">
-                <button onclick="window.open('https://www.canva.com/fr_fr/', '_blank')" class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-external-link"></i> Ouvrir Canva.com
-                </button>
-                <div class="flex gap-2">
-                    <button onclick="toggleModal('theme-canvas-modal', false)" class="px-4 py-2 bg-stone-900 text-amber-200 rounded-xl text-xs">Annuler</button>
-                    <button onclick="saveCanvasTheme()" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Enregistrer le Thème</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Toast Notification Global -->
-    <div id="global-notification-toast" class="hidden fixed bottom-6 right-6 z-50 max-w-sm bg-stone-900 border-2 border-amber-500 p-4 rounded-2xl shadow-2xl flex items-start gap-3">
+    <div id="global-notification-toast" class="hidden fixed bottom-6 right-6 z-50 max-w-sm dyn-card border-2 border-amber-500 p-4 rounded-2xl shadow-2xl flex items-start gap-3">
         <div class="text-amber-400 text-2xl" id="toast-icon"><i class="fa-solid fa-bell"></i></div>
         <div class="flex-1 space-y-1">
             <h4 class="font-bold text-xs text-amber-300" id="toast-title">LE QG</h4>
@@ -111,7 +98,7 @@
         async function init() {
             if (!await DB.get('users', null)) {
                 await DB.set('users', [
-                    { username: 'admin', password: 'admin20', role: 'admin', status: 'active', avatar: '🏰', mustChangePass: true, birthday: '2009-03-26' }
+                    { username: 'admin', lastName: 'Administrateur', password: 'admin20', role: 'admin', status: 'active', avatar: '🏰', mustChangePass: true, birthday: '2009-03-26' }
                 ]);
             }
             if (!await DB.get('messages', null)) DB.set('messages', [{ id: 1, type: 'general', sender: 'admin', text: 'Bienvenue sur LE QG !', time: 'Aujourd\'hui' }]);
@@ -126,12 +113,55 @@
             if (!await DB.get('quiz_submissions', null)) DB.set('quiz_submissions', []);
             if (!await DB.get('orientation_links', null)) DB.set('orientation_links', []);
             if (!await DB.get('home_qr_image', null)) DB.set('home_qr_image', '');
+            if (!await DB.get('site_colors', null)) DB.set('site_colors', { btnColor: '#d97706', cardBg: 'rgba(10, 10, 10, 0.9)', borderColor: 'rgba(245, 158, 11, 0.4)' });
 
-            applyTheme(await DB.get('theme', 'autumn'));
+            await applyThemeAndConfig();
 
             setInterval(showRefreshReminder, 600000);
             setInterval(checkAlarms, 30000);
             render();
+        }
+
+        async function applyThemeAndConfig() {
+            let colors = await DB.get('site_colors', { btnColor: '#d97706', cardBg: 'rgba(10, 10, 10, 0.9)', borderColor: 'rgba(245, 158, 11, 0.4)' });
+            document.documentElement.style.setProperty('--custom-btn-bg', colors.btnColor);
+            document.documentElement.style.setProperty('--custom-card-bg', colors.cardBg);
+            document.documentElement.style.setProperty('--custom-border-color', colors.borderColor);
+
+            let bgType = await DB.get('bg_type', 'image');
+            let bgVal = await DB.get('bg_value', 'https://images.unsplash.com/photo-1507783592120-a61f55877f6c?q=80&w=1920&auto=format&fit=crop');
+            let body = document.getElementById('body-theme');
+            let videoContainer = document.getElementById('video-bg-container');
+
+            if (bgType === 'video') {
+                body.style.backgroundImage = 'none';
+                videoContainer.classList.remove('hidden');
+                videoContainer.innerHTML = `<video autoplay muted loop class="w-full h-full object-cover"><source src="${bgVal}" type="video/mp4"></video>`;
+            } else {
+                videoContainer.classList.add('hidden');
+                videoContainer.innerHTML = '';
+                body.style.backgroundImage = `url('${bgVal}')`;
+            }
+
+            // Gestion Audio
+            let audioData = await DB.get('bg_audio_data', null);
+            let audioEl = document.getElementById('bg-audio');
+            if (audioData) {
+                audioEl.src = audioData;
+                audioEl.volume = 0.4;
+            }
+        }
+
+        function toggleAudioPlay() {
+            let audioEl = document.getElementById('bg-audio');
+            let btn = document.getElementById('audio-toggle-btn');
+            if (audioEl.paused) {
+                audioEl.play().catch(()=>{});
+                if(btn) btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Musique : ON';
+            } else {
+                audioEl.pause();
+                if(btn) btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Musique : OFF';
+            }
         }
 
         function showRefreshReminder() {
@@ -139,7 +169,7 @@
             if (!user) return;
             document.getElementById('toast-title').textContent = "Mise à jour disponible 🔄";
             document.getElementById('toast-msg').textContent = "Pense à actualiser ta page pour voir les dernières nouveautés et messages !";
-            document.getElementById('toast-action').innerHTML = `<button onclick="location.reload()" class="px-3 py-1 bg-amber-500 text-black font-bold rounded-lg text-xs">Actualiser maintenant</button>`;
+            document.getElementById('toast-action').innerHTML = `<button onclick="location.reload()" class="px-3 py-1 dyn-btn text-black font-bold rounded-lg text-xs">Actualiser maintenant</button>`;
             document.getElementById('global-notification-toast').classList.remove('hidden');
         }
 
@@ -147,19 +177,23 @@
             let user = getCurrentUser();
             if (!user) return;
             let now = new Date();
-            if (now.getHours() === 9 && now.getMinutes() === 0 && localStorage.getItem('leqg_cantine') !== now.toDateString()) {
+            let todayStr = now.toISOString().split('T')[0];
+
+            if (now.getHours() === 9 && now.getMinutes() === 0 && localStorage.getItem('leqg_cantine') !== todayStr) {
                 showToast("Rappel Cantine 🍽️", "Pense à réserver ta cantine à la borne du hall !");
-                localStorage.setItem('leqg_cantine', now.toDateString());
+                localStorage.setItem('leqg_cantine', todayStr);
             }
 
             let adminEvents = await DB.get('admin_calendar', []);
-            let personalEvents = user.personalCalendar || [];
-            let allEvs = [...adminEvents, ...personalEvents];
-            let todayStr = now.toISOString().split('T')[0];
-            allEvs.forEach(ev => {
-                if(ev.date === todayStr && localStorage.getItem('notif_'+ev.id) !== todayStr) {
-                    showToast("Rappel Événement 📅", ev.title);
-                    localStorage.setItem('notif_'+ev.id, todayStr);
+            adminEvents.forEach(ev => {
+                let evDate = new Date(ev.date);
+                let diffTime = evDate - new Date(todayStr);
+                let diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                let notifKey = `class_ev_notif_${ev.id}_${todayStr}`;
+                if ((diffDays === 2 || diffDays === 0) && localStorage.getItem(notifKey) !== 'true') {
+                    let msg = diffDays === 0 ? `C'est aujourd'hui : "${ev.title}" 📅` : `C'est dans 2 jours : "${ev.title}" ⏳`;
+                    showToast("Agenda de la Classe 📌", msg);
+                    localStorage.setItem(notifKey, 'true');
                 }
             });
         }
@@ -193,7 +227,7 @@
             } else if (fileType.includes('image')) {
                 container.innerHTML = `<img src="${dataUrl}" class="max-h-full max-w-full object-contain rounded-xl" />`;
             } else {
-                container.innerHTML = `<div class="p-8 text-center space-y-4"><p class="text-amber-200 text-sm">Aperçu direct non disponible pour ce type de fichier.</p><a href="${dataUrl}" download class="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold inline-block">Télécharger le fichier</a></div>`;
+                container.innerHTML = `<div class="p-8 text-center space-y-4"><p class="text-amber-200 text-sm">Aperçu direct non disponible pour ce type de fichier.</p><a href="${dataUrl}" download class="px-4 py-2 dyn-btn text-white rounded-xl text-xs font-bold inline-block">Télécharger le fichier</a></div>`;
             }
             toggleModal('file-viewer-modal', true);
         }
@@ -207,57 +241,35 @@
             }
         }
 
-        async function applyTheme(theme) {
-            let body = document.getElementById('body-theme');
-            let custom = (await DB.get('custom_themes', [])).find(t => t.id === theme);
-            if (custom) {
-                body.style.backgroundImage = `url('${custom.bgUrl}')`;
-                window.currentBtnClass = "bg-amber-600 hover:bg-amber-500 text-white rounded-2xl font-bold shadow-lg transition-all p-2.5";
-                window.currentCardClass = "bg-stone-950/90 border border-amber-500/40 shadow-2xl rounded-3xl backdrop-blur-md";
-                return;
-            }
-            const themes = {
-                christmas: { bg: 'photo-1543589077-47d81606c1bf', btn: 'bg-red-700 text-amber-100', card: 'bg-sky-950/90' },
-                summer: { bg: 'photo-1507525428034-b723cf961d3e', btn: 'bg-amber-500 text-blue-950', card: 'bg-blue-950/85' },
-                spring: { bg: 'photo-1522383225653-ed111181a951', btn: 'bg-emerald-600 text-white', card: 'bg-emerald-950/85' },
-                cyberpunk: { bg: 'photo-1508739773434-c26b3d09e071', btn: 'bg-pink-600 text-white', card: 'bg-purple-950/90' },
-                royal: { bg: 'photo-1618005182384-a83a8bd57fbe', btn: 'bg-yellow-600 text-black', card: 'bg-stone-950/90' },
-                autumn: { bg: 'photo-1507783592120-a61f55877f6c', btn: 'bg-orange-600 text-amber-100', card: 'bg-stone-950/90' }
-            };
-            let t = themes[theme] || themes.autumn;
-            body.style.backgroundImage = `url('https://images.unsplash.com/${t.bg}?q=80&w=1920&auto=format&fit=crop')`;
-            window.currentBtnClass = t.btn + " rounded-2xl font-bold shadow-lg transition-all p-2.5";
-            window.currentCardClass = t.card + " border border-amber-900/40 shadow-2xl rounded-3xl backdrop-blur-md";
-        }
-
         async function render() {
             let app = document.getElementById('app'), user = getCurrentUser();
             if (!user) return app.innerHTML = renderLogin();
-            if (user.status === 'masked') return app.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center p-6 text-center"><h1 class="text-2xl font-bold text-red-400">Compte Désactivé</h1><p class="text-xs text-amber-200/60 mt-2">Ton accès a été temporairement suspendu par un administrateur.</p><button onclick="logout()" class="mt-4 px-5 py-2 bg-amber-900 text-white rounded-xl text-xs">Déconnexion</button></div>`;
+            if (user.status === 'masked') return app.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center p-6 text-center"><h1 class="text-2xl font-bold text-red-400">Compte Désactivé</h1><p class="text-xs text-amber-200/60 mt-2">Ton accès a été temporairement suspendu par un administrateur.</p><button onclick="logout()" class="mt-4 px-5 py-2 dyn-btn text-white rounded-xl text-xs">Déconnexion</button></div>`;
             if (user.mustChangePass) return app.innerHTML = renderSetup();
             app.innerHTML = await renderDashboard(user);
         }
 
         function renderLogin() {
-            return `<div class="flex-1 flex items-center justify-center p-4"><div class="w-full max-w-md bg-stone-950/90 border border-amber-800/40 rounded-3xl p-8 shadow-2xl space-y-6 text-center">
+            return `<div class="flex-1 flex items-center justify-center p-4"><div class="w-full max-w-md dyn-card border rounded-3xl p-8 shadow-2xl space-y-6 text-center">
                 <div class="p-4 bg-amber-500/10 text-amber-400 rounded-2xl text-4xl inline-block"><i class="fa-solid fa-chess-rook"></i></div>
                 <h1 class="text-3xl font-black text-white">LE QG</h1>
                 <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
                     <input type="text" id="l-user" required placeholder="Identifiant" class="w-full px-4 py-3 bg-stone-900 border border-amber-900/50 rounded-2xl text-sm text-amber-100">
                     <input type="password" id="l-pass" required placeholder="Mot de passe" class="w-full px-4 py-3 bg-stone-900 border border-amber-900/50 rounded-2xl text-sm text-amber-100">
-                    <button type="submit" class="w-full py-3.5 ${window.currentBtnClass} text-sm">Se connecter</button>
+                    <button type="submit" class="w-full py-3.5 dyn-btn text-sm text-white font-bold rounded-2xl">Se connecter</button>
                 </form>
             </div></div>`;
         }
 
         function renderSetup() {
-            return `<div class="flex-1 flex items-center justify-center p-4"><div class="w-full max-w-md bg-stone-950/90 border border-amber-800/40 rounded-3xl p-8 shadow-2xl space-y-6">
+            return `<div class="flex-1 flex items-center justify-center p-4"><div class="w-full max-w-md dyn-card border rounded-3xl p-8 shadow-2xl space-y-6">
                 <h1 class="text-xl font-bold text-amber-400">Première Connexion</h1>
-                <p class="text-xs text-amber-200/70">Merci de définir ton mot de passe personnel ainsi que ta date d'anniversaire.</p>
+                <p class="text-xs text-amber-200/70">Merci de renseigner ton nom de famille, ton mot de passe personnel et ta date d'anniversaire.</p>
                 <form onsubmit="saveSetup(event)" class="space-y-4">
+                    <div><label class="block text-xs text-amber-200 mb-1">Nom de famille</label><input type="text" id="s-lastname" required placeholder="Ex: Dupont" class="w-full px-4 py-3 bg-stone-900 border border-amber-900/50 rounded-2xl text-sm text-white"></div>
                     <div><label class="block text-xs text-amber-200 mb-1">Nouveau mot de passe</label><input type="password" id="s-pass" required class="w-full px-4 py-3 bg-stone-900 border border-amber-900/50 rounded-2xl text-sm text-white"></div>
                     <div><label class="block text-xs text-amber-200 mb-1">Date d'anniversaire</label><input type="date" id="s-bday" required class="w-full px-4 py-3 bg-stone-900 border border-amber-900/50 rounded-2xl text-sm text-white"></div>
-                    <button type="submit" class="w-full py-3.5 ${window.currentBtnClass} text-sm">Valider & Enregistrer</button>
+                    <button type="submit" class="w-full py-3.5 dyn-btn text-sm text-white font-bold rounded-2xl">Valider & Enregistrer</button>
                 </form>
             </div></div>`;
         }
@@ -273,14 +285,19 @@
                         <button onclick="state.sidebar=!state.sidebar;render()" class="p-2 bg-stone-900 text-amber-100 rounded-xl"><i class="fa-solid fa-bars"></i></button>
                         <div class="flex items-center gap-2 font-black text-amber-400">🏰 LE QG <span class="text-xs text-amber-200/70 font-normal">(${user.username})</span></div>
                     </div>
-                    <button onclick="logout()" class="px-3 py-1.5 bg-stone-900 text-amber-200 text-xs rounded-xl border border-amber-900/40">Déconnexion</button>
+                    <div class="flex items-center gap-3">
+                        <button id="audio-toggle-btn" onclick="toggleAudioPlay()" class="px-3 py-1.5 bg-stone-900 text-amber-200 text-xs rounded-xl border border-amber-900/40 flex items-center gap-1.5">
+                            <i class="fa-solid fa-volume-xmark"></i> Musique : OFF
+                        </button>
+                        <button onclick="logout()" class="px-3 py-1.5 bg-stone-900 text-amber-200 text-xs rounded-xl border border-amber-900/40">Déconnexion</button>
+                    </div>
                 </header>
                 <div class="flex-1 flex overflow-hidden relative">
                     <aside class="fixed inset-y-0 left-0 z-30 w-72 bg-stone-950/95 border-r border-amber-900/40 transform ${state.sidebar ? 'translate-x-0' : '-translate-x-full'} transition-transform flex flex-col p-5 pt-20 shadow-2xl">
                         <nav class="space-y-1.5 flex-1 overflow-y-auto text-xs">
                             ${!hiddenPages.includes('home') ? sbBtn('home', 'Accueil & QR Code', 'house') : ''}
                             ${!hiddenPages.includes('appreciations') ? sbBtn('appreciations', 'Mes Appréciations', 'award') : ''}
-                            ${!hiddenPages.includes('avatar') ? sbBtn('avatar', 'Mon Avatar', 'user-pen') : ''}
+                            ${!hiddenPages.includes('avatar') ? sbBtn('avatar', 'Mon Avatar & Profil', 'user-pen') : ''}
                             ${!hiddenPages.includes('chat') ? sbBtn('chat', 'Messagerie', 'comments') : ''}
                             ${!hiddenPages.includes('calendar') ? sbBtn('calendar', 'Calendrier & Agenda', 'calendar-days') : ''}
                             ${!hiddenPages.includes('quizzes') ? sbBtn('quizzes', 'Quiz & Progrès', 'brain') : ''}
@@ -299,13 +316,13 @@
 
         function sbBtn(id, label, icon, extra = '') {
             let active = state.tab === id;
-            return `<button onclick="state.tab='${id}';state.sidebar=false;render()" class="w-full text-left px-4 py-3 rounded-2xl flex items-center gap-3 border transition-all ${active ? window.currentBtnClass : 'text-amber-200/80 bg-stone-900/50 border-transparent hover:bg-stone-900'} ${extra}"><i class="fa-solid fa-${icon}"></i> ${label}</button>`;
+            return `<button onclick="state.tab='${id}';state.sidebar=false;render()" class="w-full text-left px-4 py-3 rounded-2xl flex items-center gap-3 border transition-all ${active ? 'dyn-btn text-white font-bold shadow-lg' : 'text-amber-200/80 bg-stone-900/50 border-transparent hover:bg-stone-900'} ${extra}"><i class="fa-solid fa-${icon}"></i> ${label}</button>`;
         }
 
         async function renderContent(user) {
             if (state.tab.startsWith('page_')) {
                 let cp = (await DB.get('custom_pages', [])).find(x => x.id == state.tab.replace('page_', ''));
-                return cp ? `<div class="max-w-4xl mx-auto ${window.currentCardClass} p-8 space-y-4"><h2 class="text-2xl font-black text-amber-400">${cp.title}</h2><div class="text-amber-100">${cp.content}</div></div>` : '';
+                return cp ? `<div class="max-w-4xl mx-auto dyn-card border p-8 space-y-4 rounded-3xl"><h2 class="text-2xl font-black text-amber-400">${cp.title}</h2><div class="text-amber-100">${cp.content}</div></div>` : '';
             }
             if (state.tab === 'home') return renderHome();
             if (state.tab === 'appreciations') return renderUserAppreciations(user);
@@ -315,23 +332,54 @@
             if (state.tab === 'orientation') return renderOrientation(user);
             if (state.tab === 'revisions') return renderDocPage('Fiches de Révision', await DB.get('revision_sheets', []), user);
             if (state.tab === 'exams') return renderDocPage('Sujets Bac & Exercices', await DB.get('exam_subjects', []), user);
-            if (state.tab === 'avatar') return `<div class="max-w-md mx-auto ${window.currentCardClass} p-8 text-center space-y-6"><div class="text-7xl">${user.avatar || '🏰'}</div><div class="grid grid-cols-5 gap-3">${['🏰','🎓','🚀','⭐','💻','🦊','⚡','📚','🎯','💡'].map(e=>`<button onclick="updateAvatar('${e}')" class="p-3 bg-stone-900 rounded-2xl text-2xl hover:scale-110 transition-transform">${e}</button>`).join('')}</div></div>`;
-            if (state.tab === 'notes') return `<div class="max-w-3xl mx-auto ${window.currentCardClass} p-6 h-[500px] flex flex-col"><h2 class="text-xl font-bold text-amber-400 mb-2">Bloc-Notes</h2><textarea oninput="DB.set('note_'+ '${user.username}', this.value)" class="flex-1 w-full bg-stone-900 border border-amber-900/40 p-4 rounded-2xl text-sm text-amber-100" placeholder="Écris tes notes personnelles ici...">${localStorage.getItem('leqg_note_'+user.username)||''}</textarea></div>`;
+            if (state.tab === 'avatar') return renderAvatarPage(user);
+            if (state.tab === 'notes') return `<div class="max-w-3xl mx-auto dyn-card border p-6 h-[500px] flex flex-col rounded-3xl"><h2 class="text-xl font-bold text-amber-400 mb-2">Bloc-Notes</h2><textarea oninput="DB.set('note_'+ '${user.username}', this.value)" class="flex-1 w-full bg-stone-900 border border-amber-900/40 p-4 rounded-2xl text-sm text-amber-100" placeholder="Écris tes notes personnelles ici...">${localStorage.getItem('leqg_note_'+user.username)||''}</textarea></div>`;
             if (state.tab === 'gemini' && user.role === 'admin') return renderGeminiTab();
             if (state.tab === 'admin' && user.role === 'admin') return renderAdmin(user);
             return '';
+        }
+
+        function renderAvatarPage(user) {
+            return `
+                <div class="max-w-md mx-auto dyn-card border p-8 text-center space-y-6 rounded-3xl">
+                    <div class="text-7xl">${user.avatar || '🏰'}</div>
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-black text-amber-400">Personnaliser ton Avatar</h2>
+                        <p class="text-xs text-amber-200/70">Tape ou colle un unique émoji de ton choix dans la zone ci-dessous :</p>
+                    </div>
+                    <form onsubmit="saveEmojiAvatar(event)" class="space-y-4">
+                        <input type="text" id="avatar-emoji-input" maxlength="4" value="${user.avatar || '🏰'}" required class="w-24 mx-auto text-center text-4xl p-2 bg-stone-900 border border-amber-900/40 rounded-2xl block text-amber-100">
+                        <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Enregistrer mon émoji</button>
+                    </form>
+                </div>`;
+        }
+
+        async function saveEmojiAvatar(e) {
+            e.preventDefault();
+            let val = document.getElementById('avatar-emoji-input').value.trim();
+            if(!val) return;
+            let user = getCurrentUser();
+            let users = await DB.get('users', []);
+            let idx = users.findIndex(u => u.username === user.username);
+            if(idx !== -1) {
+                users[idx].avatar = val;
+                await DB.set('users', users);
+                localStorage.setItem('leqg_current_user', JSON.stringify(users[idx]));
+                showToast("Succès", "Ton avatar émoji a été mis à jour !");
+                render();
+            }
         }
 
         async function renderHome() {
             let qrImage = await DB.get('home_qr_image', '');
             return `
                 <div class="max-w-3xl mx-auto space-y-6 text-center">
-                    <div class="${window.currentCardClass} p-8 space-y-4">
+                    <div class="dyn-card border p-8 space-y-4 rounded-3xl">
                         <h2 class="text-3xl font-black text-white">Bienvenue sur LE QG !</h2>
                         <p class="text-amber-200/80 text-sm">Ton espace collaboratif de lycée.</p>
                     </div>
 
-                    <div class="${window.currentCardClass} p-8 space-y-4">
+                    <div class="dyn-card border p-8 space-y-4 rounded-3xl">
                         <h3 class="text-xl font-black text-amber-400"><i class="fa-solid fa-mobile-screen-button mr-2"></i>Accès & Installation Smartphone</h3>
                         ${qrImage ? `
                             <p class="text-xs text-amber-200/70">Scanne ce QR Code officiel pour ouvrir l'application directement sur ton smartphone :</p>
@@ -353,7 +401,7 @@
 
             if (!myApp.published && user.role !== 'admin') {
                 return `
-                    <div class="max-w-2xl mx-auto ${window.currentCardClass} p-8 text-center space-y-4">
+                    <div class="max-w-2xl mx-auto dyn-card border p-8 text-center space-y-4 rounded-3xl">
                         <i class="fa-solid fa-lock text-4xl text-amber-400"></i>
                         <h2 class="text-2xl font-black text-white">Appréciations Trimestrielles</h2>
                         <p class="text-xs text-amber-200/70">Les appréciations trimestrielles n'ont pas encore été publiées par l'administration.</p>
@@ -362,21 +410,21 @@
 
             return `
                 <div class="max-w-3xl mx-auto space-y-6">
-                    <div class="${window.currentCardClass} p-6 space-y-2">
+                    <div class="dyn-card border p-6 space-y-2 rounded-3xl">
                         <h2 class="text-2xl font-black text-amber-400"><i class="fa-solid fa-award mr-2"></i>Mes Appréciations Trimestrielles</h2>
                         <p class="text-xs text-amber-200/70">Consulte tes appréciations générales trimestrielles renseignées par l'administration.</p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="${window.currentCardClass} p-5 space-y-2">
+                        <div class="dyn-card border p-5 space-y-2 rounded-3xl">
                             <h3 class="font-bold text-amber-300 text-sm border-b border-amber-900/40 pb-2">Trimestre 1</h3>
                             <p class="text-xs text-amber-100 italic">${myApp.t1 || 'Aucune appréciation renseignée.'}</p>
                         </div>
-                        <div class="${window.currentCardClass} p-5 space-y-2">
+                        <div class="dyn-card border p-5 space-y-2 rounded-3xl">
                             <h3 class="font-bold text-amber-300 text-sm border-b border-amber-900/40 pb-2">Trimestre 2</h3>
                             <p class="text-xs text-amber-100 italic">${myApp.t2 || 'Aucune appréciation renseignée.'}</p>
                         </div>
-                        <div class="${window.currentCardClass} p-5 space-y-2">
+                        <div class="dyn-card border p-5 space-y-2 rounded-3xl">
                             <h3 class="font-bold text-amber-300 text-sm border-b border-amber-900/40 pb-2">Trimestre 3</h3>
                             <p class="text-xs text-amber-100 italic">${myApp.t3 || 'Aucune appréciation renseignée.'}</p>
                         </div>
@@ -391,36 +439,42 @@
 
             return `
                 <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 h-[600px]">
-                    <div class="${window.currentCardClass} p-4 shadow-xl flex flex-col space-y-3">
+                    <div class="dyn-card border p-4 shadow-xl flex flex-col space-y-3 rounded-3xl">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-amber-200/70">Messagerie</h3>
-                        <button onclick="state.chatMode='general';state.targetUser=null;render()" class="w-full text-left p-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-3 ${state.chatMode === 'general' ? window.currentBtnClass : 'bg-stone-900 text-amber-200/80'}">
+                        <button onclick="state.chatMode='general';state.targetUser=null;render()" class="w-full text-left p-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-3 ${state.chatMode === 'general' ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200/80'}">
                             <i class="fa-solid fa-bullhorn text-sm"></i> Canal Général
                         </button>
                         <div class="border-t border-amber-900/30 pt-3 flex-1 overflow-y-auto space-y-2">
                             <p class="text-[10px] uppercase font-bold text-amber-200/50 px-1">Membres (MP)</p>
                             ${allUsers.filter(u => u.username !== user.username && u.status !== 'masked').map(u => `
-                                <button onclick="state.chatMode='private';state.targetUser='${u.username}';render()" class="w-full text-left p-3 rounded-2xl text-xs transition-all flex items-center gap-3 ${state.chatMode === 'private' && state.targetUser === u.username ? window.currentBtnClass : 'bg-stone-900 text-amber-200/80'}">
+                                <button onclick="state.chatMode='private';state.targetUser='${u.username}';render()" class="w-full text-left p-3 rounded-2xl text-xs transition-all flex items-center gap-3 ${state.chatMode === 'private' && state.targetUser === u.username ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200/80'}">
                                     <span class="text-xl">${u.avatar || '🏰'}</span>
-                                    <div class="truncate"><p class="font-bold truncate">${u.username}</p></div>
+                                    <div class="truncate"><p class="font-bold truncate">${u.username}</p><p class="text-[10px] text-amber-200/50">${u.lastName || ''}</p></div>
                                 </button>
                             `).join('')}
                         </div>
                     </div>
-                    <div class="md:col-span-3 ${window.currentCardClass} p-6 shadow-xl flex flex-col justify-between">
+                    <div class="md:col-span-3 dyn-card border p-6 shadow-xl flex flex-col justify-between rounded-3xl">
                         <div class="border-b border-amber-900/30 pb-3 flex justify-between items-center">
                             <h2 class="font-bold text-sm text-amber-400">${state.chatMode === 'general' ? '💬 Canal Général' : '🔒 MP avec ' + state.targetUser}</h2>
                         </div>
                         <div class="flex-1 bg-stone-900 border border-amber-900/30 rounded-2xl p-4 my-3 overflow-y-auto space-y-3">
-                            ${activeMsgs.length > 0 ? activeMsgs.map(m => `
-                                <div class="p-3.5 bg-stone-950 border border-amber-900/30 rounded-2xl text-xs space-y-1.5">
-                                    <div class="flex justify-between text-[10px] text-amber-200/50"><span class="font-bold text-amber-400">${m.sender}</span><span>${m.time}</span></div>
-                                    <p class="text-amber-100 text-sm">${m.text}</p>
-                                </div>
-                            `).join('') : '<div class="text-center py-24 text-amber-200/40 text-xs italic">Aucun message pour le moment.</div>'}
+                            ${activeMsgs.length > 0 ? activeMsgs.map(m => {
+                                let senderObj = allUsers.find(u => u.username === m.sender) || { avatar: '👤', lastName: '' };
+                                return `
+                                    <div class="p-3.5 bg-stone-950 border border-amber-900/30 rounded-2xl text-xs space-y-1.5">
+                                        <div class="flex justify-between items-center text-[10px] text-amber-200/50">
+                                            <span class="font-bold text-amber-400 flex items-center gap-1.5"><span class="text-sm">${senderObj.avatar||'👤'}</span> ${m.sender} <span class="text-[9px] text-amber-200/50 font-normal">(${senderObj.lastName || ''})</span></span>
+                                            <span>${m.time}</span>
+                                        </div>
+                                        <p class="text-amber-100 text-sm">${m.text}</p>
+                                    </div>
+                                `;
+                            }).join('') : '<div class="text-center py-24 text-amber-200/40 text-xs italic">Aucun message pour le moment.</div>'}
                         </div>
                         <form onsubmit="sendMessage(event)" class="flex gap-2">
                             <input type="text" id="chat-input" placeholder="Écrire un message..." required class="flex-1 px-4 py-3 bg-stone-900 border border-amber-900/40 rounded-2xl text-xs text-amber-100">
-                            <button type="submit" class="${window.currentBtnClass}">Envoyer</button>
+                            <button type="submit" class="dyn-btn text-white font-bold px-5 rounded-2xl text-xs">Envoyer</button>
                         </form>
                     </div>
                 </div>`;
@@ -440,35 +494,40 @@
 
         async function renderCalendar(user) {
             let adminEvents = await DB.get('admin_calendar', []);
+            adminEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
             let personalEvents = user.personalCalendar || [];
+            personalEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
             return `
                 <div class="max-w-4xl mx-auto space-y-6">
-                    <div class="${window.currentCardClass} p-6 space-y-4">
+                    <div class="dyn-card border p-6 space-y-4 rounded-3xl">
                         <h2 class="text-2xl font-black text-amber-400"><i class="fa-solid fa-calendar-days mr-2"></i>Agenda & Calendrier</h2>
-                        <p class="text-xs text-amber-200/70">Consulte les événements du lycée et ajoute tes propres rappels personnels.</p>
+                        <p class="text-xs text-amber-200/70">Consulte les événements de la classe et gère tes rappels personnels.</p>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="${window.currentCardClass} p-6 space-y-3">
-                            <h3 class="font-bold text-amber-300 text-sm uppercase">📌 Événements Généraux</h3>
+                        <div class="dyn-card border p-6 space-y-3 rounded-3xl">
+                            <h3 class="font-bold text-amber-300 text-sm uppercase">📌 Agenda de la Classe</h3>
                             <div class="space-y-2 max-h-64 overflow-y-auto text-xs">
                                 ${adminEvents.length > 0 ? adminEvents.map(ev => `
-                                    <div class="p-3 bg-stone-900 rounded-xl border border-amber-900/30 flex justify-between">
+                                    <div class="p-3 bg-stone-900 rounded-xl border border-amber-900/30 flex justify-between items-center">
                                         <div><p class="font-bold text-amber-100">${ev.title}</p><p class="text-[10px] text-amber-200/50">${ev.date}</p></div>
                                     </div>
-                                `).join('') : '<p class="text-xs text-amber-200/40 italic">Aucun événement général.</p>'}
+                                `).join('') : '<p class="text-xs text-amber-200/40 italic">Aucun événement de classe enregistré.</p>'}
                             </div>
                         </div>
-                        <div class="${window.currentCardClass} p-6 space-y-3">
+                        <div class="dyn-card border p-6 space-y-3 rounded-3xl">
                             <h3 class="font-bold text-amber-300 text-sm uppercase">✏️ Mes Rappels Personnels</h3>
                             <form onsubmit="addPersonalEvent(event)" class="space-y-2 pb-2">
                                 <input type="text" id="ev-title" placeholder="Titre de l'événement..." required class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
                                 <input type="date" id="ev-date" required class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
-                                <button type="submit" class="w-full py-2 ${window.currentBtnClass} text-xs">Ajouter au calendrier</button>
+                                <button type="submit" class="w-full py-2 dyn-btn text-white font-bold rounded-xl text-xs">Ajouter au calendrier</button>
                             </form>
                             <div class="space-y-2 max-h-48 overflow-y-auto text-xs">
-                                ${personalEvents.map(ev => `
-                                    <div class="p-3 bg-stone-900 rounded-xl border border-amber-900/30 flex justify-between">
+                                ${personalEvents.map((ev, idx) => `
+                                    <div class="p-3 bg-stone-900 rounded-xl border border-amber-900/30 flex justify-between items-center">
                                         <div><p class="font-bold text-amber-100">${ev.title}</p><p class="text-[10px] text-amber-200/50">${ev.date}</p></div>
+                                        <button onclick="deletePersonalEvent(${idx})" class="text-red-400 hover:text-red-300 px-2 py-1"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                 `).join('')}
                             </div>
@@ -493,122 +552,43 @@
             }
         }
 
-        async function renderQuizzes(user) {
-            let quizzes = await DB.get('quizzes', []);
-            let submissions = await DB.get('quiz_submissions', []);
-            let userSubmissions = submissions.filter(s => s.username === user.username);
-
-            if(state.activeQuizId) {
-                let quiz = quizzes.find(q => q.id == state.activeQuizId);
-                if(!quiz) return `<div class="text-center text-amber-200">Quiz introuvable. <button onclick="state.activeQuizId=null;render()" class="text-amber-400 underline">Retour</button></div>`;
-                return `
-                    <div class="max-w-3xl mx-auto ${window.currentCardClass} p-8 space-y-6">
-                        <div class="flex justify-between items-center border-b border-amber-900/40 pb-4">
-                            <h2 class="text-2xl font-black text-amber-400">${quiz.title}</h2>
-                            <button onclick="state.activeQuizId=null;render()" class="px-3 py-1 bg-stone-900 text-amber-200 rounded-xl text-xs">Quitter</button>
-                        </div>
-                        <form onsubmit="submitQuiz(event, ${quiz.id})" class="space-y-6">
-                            ${quiz.questions.map((q, idx) => `
-                                <div class="space-y-3 bg-stone-900/60 p-4 rounded-2xl border border-amber-900/30">
-                                    <p class="font-bold text-sm text-amber-100"><b>Q${idx+1}.</b> ${q.question}</p>
-                                    <div class="space-y-2 text-xs">
-                                        ${q.options.map((opt, oIdx) => `
-                                            <label class="block p-3 bg-stone-900 border border-amber-900/30 rounded-xl cursor-pointer hover:border-amber-500 transition-colors">
-                                                <input type="radio" name="q_${idx}" value="${oIdx}" required class="mr-2"> ${opt}
-                                            </label>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            `).join('')}
-                            <button type="submit" class="w-full py-3 ${window.currentBtnClass} text-sm">Valider mes réponses</button>
-                        </form>
-                    </div>`;
-            }
-
-            return `
-                <div class="max-w-4xl mx-auto space-y-6">
-                    <div class="${window.currentCardClass} p-6 space-y-4">
-                        <h2 class="text-2xl font-black text-amber-400"><i class="fa-solid fa-brain mr-2"></i>Quiz & Suivi des Progrès</h2>
-                        <p class="text-xs text-amber-200/70">Teste tes connaissances autant de fois que tu veux et suis ta progression.</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="${window.currentCardClass} p-6 space-y-4">
-                            <h3 class="font-bold text-sm text-amber-300 uppercase">🧠 Quiz Disponibles</h3>
-                            <div class="space-y-3">
-                                ${quizzes.length > 0 ? quizzes.map(q => `
-                                    <div class="p-4 bg-stone-900 border border-amber-900/40 rounded-2xl flex justify-between items-center text-xs">
-                                        <div>
-                                            <h4 class="font-bold text-amber-100">${q.title}</h4>
-                                            <p class="text-[10px] text-amber-200/50">${q.questions.length} question(s)</p>
-                                        </div>
-                                        <button onclick="state.activeQuizId=${q.id};render()" class="px-4 py-2 ${window.currentBtnClass}">Faire le test</button>
-                                    </div>
-                                `).join('') : '<p class="text-xs text-amber-200/40 italic">Aucun quiz disponible pour le moment.</p>'}
-                            </div>
-                        </div>
-
-                        <div class="${window.currentCardClass} p-6 space-y-4">
-                            <h3 class="font-bold text-sm text-amber-300 uppercase">📈 Mon Historique</h3>
-                            <div class="space-y-2 max-h-64 overflow-y-auto">
-                                ${userSubmissions.length > 0 ? userSubmissions.map(s => `
-                                    <div class="p-3 bg-stone-900 rounded-xl text-xs flex justify-between items-center">
-                                        <div>
-                                            <p class="font-bold text-amber-100">${s.quizTitle}</p>
-                                            <p class="text-[10px] text-amber-200/50">${s.date}</p>
-                                        </div>
-                                        <span class="px-3 py-1 bg-amber-500/20 text-amber-300 rounded-lg font-bold">${s.score} / ${s.total}</span>
-                                    </div>
-                                `).join('') : '<p class="text-xs text-amber-200/40 italic">Aucun test réalisé pour l\'instant.</p>'}
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        async function submitQuiz(e, quizId) {
-            e.preventDefault();
-            let quizzes = await DB.get('quizzes', []);
-            let quiz = quizzes.find(q => q.id == quizId);
-            if(!quiz) return;
-
-            let score = 0;
-            quiz.questions.forEach((q, idx) => {
-                let selected = document.querySelector(`input[name="q_${idx}"]:checked`);
-                if(selected && parseInt(selected.value) === q.correct) {
-                    score++;
-                }
-            });
-
+        async function deletePersonalEvent(eventIndex) {
             let user = getCurrentUser();
-            let submission = { username: user.username, quizTitle: quiz.title, score, total: quiz.questions.length, date: new Date().toLocaleDateString() + ' à ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-
-            let submissions = await DB.get('quiz_submissions', []);
-            submissions.push(submission);
-            await DB.set('quiz_submissions', submissions);
-
-            alert(`Quiz terminé ! Ton score est de ${score} / ${quiz.questions.length}`);
-            state.activeQuizId = null;
-            render();
+            let users = await DB.get('users', []);
+            let idx = users.findIndex(u => u.username === user.username);
+            if(idx !== -1 && users[idx].personalCalendar) {
+                users[idx].personalCalendar.splice(eventIndex, 1);
+                await DB.set('users', users);
+                localStorage.setItem('leqg_current_user', JSON.stringify(users[idx]));
+                render();
+            }
         }
 
         async function renderOrientation(user) {
             let links = await DB.get('orientation_links', []);
             return `
                 <div class="max-w-4xl mx-auto space-y-6">
-                    <div class="${window.currentCardClass} p-6 space-y-4">
+                    <div class="dyn-card border p-6 space-y-4 rounded-3xl">
                         <h2 class="text-2xl font-black text-amber-400"><i class="fa-solid fa-compass mr-2"></i>Espace Orientation</h2>
                         <p class="text-xs text-amber-200/70">Découvre les liens et ressources utiles pour ton orientation post-bac.</p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         ${links.length > 0 ? links.map(l => `
-                            <div class="${window.currentCardClass} p-5 space-y-3">
-                                <h3 class="font-bold text-amber-300 text-sm">${l.title}</h3>
-                                <a href="${l.url}" target="_blank" class="px-4 py-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-200 inline-block hover:border-amber-500">
-                                    <i class="fa-solid fa-external-link mr-1"></i> Ouvrir le site
-                                </a>
+                            <div class="dyn-card border p-6 space-y-4 flex flex-col justify-between rounded-3xl">
+                                <div class="space-y-3">
+                                    <div class="w-full h-36 bg-stone-900 border border-amber-900/40 rounded-2xl overflow-hidden flex items-center justify-center relative">
+                                        ${l.previewImg ? `<img src="${l.previewImg}" class="w-full h-full object-cover" />` : `<i class="fa-solid fa-compass text-4xl text-amber-500/40"></i>`}
+                                    </div>
+                                    <h3 class="font-bold text-amber-100 text-sm">${l.title}</h3>
+                                </div>
+                                <div class="space-y-3 pt-2 border-t border-amber-900/40">
+                                    <p class="text-xs text-amber-300 font-medium"><i class="fa-solid fa-globe mr-1"></i> ${l.siteName || l.url}</p>
+                                    <a href="${l.url}" target="_blank" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs text-center inline-block">
+                                        Ouvrir le site web <i class="fa-solid fa-external-link ml-1"></i>
+                                    </a>
+                                </div>
                             </div>
-                        `).join('') : '<div class="col-span-2 text-center py-10 text-xs text-amber-200/40 italic">Aucun lien d\'orientation publié.</div>'}
+                        `).join('') : '<div class="col-span-2 text-center py-12 text-xs text-amber-200/40 italic">Aucun lien d\'orientation publié pour le moment.</div>'}
                     </div>
                 </div>`;
         }
@@ -616,13 +596,13 @@
         function renderDocPage(title, items, user) {
             return `
                 <div class="max-w-4xl mx-auto space-y-6">
-                    <div class="${window.currentCardClass} p-6 space-y-2">
+                    <div class="dyn-card border p-6 space-y-2 rounded-3xl">
                         <h2 class="text-2xl font-black text-amber-400">${title}</h2>
                         <p class="text-xs text-amber-200/70">Consulte, télécharge ou imprime les documents publiés.</p>
                     </div>
                     <div class="space-y-4">
                         ${items.length > 0 ? items.map(doc => `
-                            <div class="${window.currentCardClass} p-6 space-y-4">
+                            <div class="dyn-card border p-6 space-y-4 rounded-3xl">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <h4 class="font-bold text-amber-100 text-base">${doc.title}</h4>
@@ -632,7 +612,7 @@
                                         <button onclick="openFileViewer('${doc.title.replace(/'/g, "\\'")}', '${doc.fileData}', '${doc.fileType}')" class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md">
                                             <i class="fa-solid fa-expand"></i> Ouvrir en grand
                                         </button>
-                                        <a href="${doc.fileData}" download="${doc.title.replace(/\s+/g, '_')}.${doc.fileType.includes('pdf')?'pdf':'png'}" class="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md">
+                                        <a href="${doc.fileData}" download="${doc.title.replace(/\s+/g, '_')}.${doc.fileType.includes('pdf')?'pdf':'png'}" class="px-3 py-2 dyn-btn text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md">
                                             <i class="fa-solid fa-download"></i> Télécharger
                                         </a>
                                         <button onclick="printFile('${doc.fileData}', '${doc.fileType}')" class="px-3 py-2 bg-stone-900 border border-amber-900/40 text-amber-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5">
@@ -655,7 +635,7 @@
         function renderGeminiTab() {
             return `
                 <div class="max-w-4xl mx-auto space-y-6">
-                    <div class="${window.currentCardClass} p-8 space-y-4 text-center">
+                    <div class="dyn-card border p-8 space-y-4 text-center rounded-3xl">
                         <i class="fa-solid fa-sparkles text-5xl text-sky-400 animate-pulse"></i>
                         <h2 class="text-2xl font-black text-white">Assistant Gemini AI (Réservé Admin)</h2>
                         <p class="text-xs text-amber-200/70">Utilise Gemini directement dans un onglet dédié ou accède à la plateforme officielle.</p>
@@ -676,20 +656,24 @@
 
             return `
                 <div class="max-w-5xl mx-auto space-y-6">
-                    <div class="${window.currentCardClass} p-6">
+                    <div class="dyn-card border p-6 rounded-3xl">
                         <h2 class="text-2xl font-black text-amber-400 mb-4"><i class="fa-solid fa-user-gear mr-2"></i>Panneau Administration</h2>
                         <div class="flex gap-2 border-b border-amber-900/40 pb-3 flex-wrap text-xs">
-                            <button onclick="state.adminSub='users';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'users' ? 'bg-amber-500 text-black' : 'bg-stone-900 text-amber-200'}">Gestion des Élèves</button>
-                            <button onclick="state.adminSub='appreciations';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'appreciations' ? 'bg-amber-500 text-black' : 'bg-stone-900 text-amber-200'}">Appréciations Trimestrielles</button>
-                            <button onclick="state.adminSub='docs';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'docs' ? 'bg-amber-500 text-black' : 'bg-stone-900 text-amber-200'}">Dépôt Fiches & Sujets Bac</button>
-                            <button onclick="state.adminSub='pages';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'pages' ? 'bg-amber-500 text-black' : 'bg-stone-900 text-amber-200'}">Pages & Thèmes</button>
+                            <button onclick="state.adminSub='users';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'users' ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200'}">Gestion des Élèves</button>
+                            <button onclick="state.adminSub='appreciations';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'appreciations' ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200'}">Appréciations</button>
+                            <button onclick="state.adminSub='calendar';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'calendar' ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200'}">Agenda Commun</button>
+                            <button onclick="state.adminSub='orientation';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'orientation' ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200'}">Liens Orientation</button>
+                            <button onclick="state.adminSub='docs';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'docs' ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200'}">Fiches & Sujets</button>
+                            <button onclick="state.adminSub='appearance';render()" class="px-4 py-2 rounded-xl font-bold ${state.adminSub === 'appearance' ? 'dyn-btn text-white' : 'bg-stone-900 text-amber-200'}">Fond, Couleurs & Musique</button>
                         </div>
                     </div>
 
                     ${state.adminSub === 'users' ? renderAdminUsers(users) : ''}
                     ${state.adminSub === 'appreciations' ? renderAdminAppreciations(users, appreciations) : ''}
+                    ${state.adminSub === 'calendar' ? await renderAdminCalendar() : ''}
+                    ${state.adminSub === 'orientation' ? await renderAdminOrientation() : ''}
                     ${state.adminSub === 'docs' ? await renderAdminDocs() : ''}
-                    ${state.adminSub === 'pages' ? renderAdminPages(customPages, hiddenPages) : ''}
+                    ${state.adminSub === 'appearance' ? await renderAdminAppearance() : ''}
                 </div>`;
         }
 
@@ -697,22 +681,26 @@
             let students = users.filter(u => u.role !== 'admin');
             return `
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="${window.currentCardClass} p-6 space-y-4">
+                    <div class="dyn-card border p-6 space-y-4 rounded-3xl">
                         <h3 class="font-bold text-amber-300 text-sm">Ajouter un nouvel Élève</h3>
                         <form onsubmit="createStudentAccount(event)" class="space-y-3">
                             <div>
-                                <label class="block text-[10px] uppercase font-bold text-amber-200/60 mb-1">Identifiant élève</label>
-                                <input type="text" id="nu-user" required placeholder="ex: dupont_m" class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                                <label class="block text-[10px] uppercase font-bold text-amber-200/60 mb-1">Identifiant / Prénom</label>
+                                <input type="text" id="nu-user" required placeholder="ex: maxime" class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-amber-200/60 mb-1">Nom de famille</label>
+                                <input type="text" id="nu-lastname" required placeholder="ex: Dupont" class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
                             </div>
                             <div>
                                 <label class="block text-[10px] uppercase font-bold text-amber-200/60 mb-1">Mot de passe temporaire</label>
                                 <input type="password" id="nu-pass" required placeholder="Mot de passe..." class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
                             </div>
-                            <button type="submit" class="w-full py-2.5 ${window.currentBtnClass} text-xs">Créer le compte</button>
+                            <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Créer le compte</button>
                         </form>
                     </div>
 
-                    <div class="md:col-span-2 ${window.currentCardClass} p-6 space-y-4">
+                    <div class="md:col-span-2 dyn-card border p-6 space-y-4 rounded-3xl">
                         <h3 class="font-bold text-amber-300 text-sm">Comptes Élèves Enregistrés (${students.length})</h3>
                         <div class="space-y-2 max-h-96 overflow-y-auto">
                             ${students.length > 0 ? students.map(s => `
@@ -720,8 +708,8 @@
                                     <div class="flex items-center gap-2">
                                         <span class="text-lg">${s.avatar || '🏰'}</span>
                                         <div>
-                                            <p class="font-bold text-amber-100">${s.username}</p>
-                                            <p class="text-[10px] ${s.status === 'masked' ? 'text-red-400 font-bold' : 'text-emerald-400'}">${s.status === 'masked' ? 'Compte masqué / désactivé' : 'Actif'}</p>
+                                            <p class="font-bold text-amber-100">${s.username} <span class="text-amber-200/50 font-normal">(${s.lastName || 'Sans nom'})</span></p>
+                                            <p class="text-[10px] ${s.status === 'masked' ? 'text-red-400 font-bold' : 'text-emerald-400'}">${s.status === 'masked' ? 'Compte désactivé' : 'Actif'}</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-2 flex-wrap">
@@ -741,6 +729,7 @@
         async function createStudentAccount(e) {
             e.preventDefault();
             let username = document.getElementById('nu-user').value.trim();
+            let lastName = document.getElementById('nu-lastname').value.trim();
             let password = document.getElementById('nu-pass').value.trim();
 
             let users = await DB.get('users', []);
@@ -748,6 +737,7 @@
 
             users.push({
                 username,
+                lastName,
                 password,
                 role: 'student',
                 status: 'active',
@@ -797,7 +787,7 @@
         function renderAdminAppreciations(users, appreciations) {
             let students = users.filter(u => u.role !== 'admin');
             return `
-                <div class="${window.currentCardClass} p-6 space-y-4">
+                <div class="dyn-card border p-6 space-y-4 rounded-3xl">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-amber-300 text-sm">Gestion des Appréciations Trimestrielles</h3>
                         <p class="text-[10px] text-amber-200/50">Tape tes appréciations et valide pour publier la fiche de chaque élève.</p>
@@ -819,7 +809,7 @@
                                     let app = appreciations[s.username] || { t1: '', t2: '', t3: '', published: false };
                                     return `
                                         <tr class="border-b border-amber-900/20 bg-stone-900/40">
-                                            <td class="p-3 font-bold text-amber-300">${s.username}</td>
+                                            <td class="p-3 font-bold text-amber-300">${s.username} <span class="block text-[10px] text-amber-200/50 font-normal">${s.lastName||''}</span></td>
                                             <td class="p-2"><textarea id="app_t1_${s.username}" class="w-full p-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs">${app.t1||''}</textarea></td>
                                             <td class="p-2"><textarea id="app_t2_${s.username}" class="w-full p-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs">${app.t2||''}</textarea></td>
                                             <td class="p-2"><textarea id="app_t3_${s.username}" class="w-full p-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs">${app.t3||''}</textarea></td>
@@ -827,7 +817,7 @@
                                                 <input type="checkbox" id="app_pub_${s.username}" ${app.published ? 'checked' : ''} class="w-4 h-4 text-amber-600 rounded">
                                             </td>
                                             <td class="p-3 text-right">
-                                                <button onclick="saveStudentAppreciation('${s.username}')" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold text-xs">Enregistrer</button>
+                                                <button onclick="saveStudentAppreciation('${s.username}')" class="px-3 py-1.5 dyn-btn text-white rounded-xl font-bold text-xs">Enregistrer</button>
                                             </td>
                                         </tr>`;
                                 }).join('')}
@@ -849,20 +839,111 @@
             showToast("Enregistré", `Appréciations de ${username} enregistrées !`);
         }
 
+        async function renderAdminCalendar() {
+            let adminEvents = await DB.get('admin_calendar', []);
+            adminEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            return `
+                <div class="dyn-card border p-6 space-y-4 rounded-3xl">
+                    <h3 class="font-bold text-amber-300 text-sm">Ajouter un événement dans l'Agenda de la Classe</h3>
+                    <form onsubmit="addAdminCalendarEvent(event)" class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input type="text" id="admin-ev-title" required placeholder="Titre de l'événement..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            <input type="date" id="admin-ev-date" required class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                        </div>
+                        <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Publier l'événement pour toute la classe</button>
+                    </form>
+                    <div class="space-y-2 mt-4 max-h-64 overflow-y-auto">
+                        ${adminEvents.length > 0 ? adminEvents.map((ev, i) => `
+                            <div class="p-3 bg-stone-900 rounded-xl flex justify-between items-center text-xs">
+                                <div><p class="font-bold text-amber-100">${ev.title}</p><p class="text-[10px] text-amber-200/50">${ev.date}</p></div>
+                                <button onclick="deleteAdminCalendarEvent(${i})" class="px-3 py-1 bg-red-600/30 text-red-300 rounded-lg font-bold">Supprimer</button>
+                            </div>
+                        `).join('') : '<p class="text-xs text-amber-200/40 italic">Aucun événement de classe enregistré.</p>'}
+                    </div>
+                </div>`;
+        }
+
+        async function addAdminCalendarEvent(e) {
+            e.preventDefault();
+            let title = document.getElementById('admin-ev-title').value.trim();
+            let date = document.getElementById('admin-ev-date').value;
+            let events = await DB.get('admin_calendar', []);
+            events.push({ id: Date.now(), title, date });
+            events.sort((a, b) => new Date(a.date) - new Date(b.date));
+            await DB.set('admin_calendar', events);
+            showToast("Succès", "Événement ajouté à l'agenda de la classe !");
+            render();
+        }
+
+        async function deleteAdminCalendarEvent(index) {
+            if(!confirm("Supprimer cet événement de l'agenda commun ?")) return;
+            let events = await DB.get('admin_calendar', []);
+            events.sort((a, b) => new Date(a.date) - new Date(b.date));
+            events.splice(index, 1);
+            await DB.set('admin_calendar', events);
+            render();
+        }
+
+        async function renderAdminOrientation() {
+            let links = await DB.get('orientation_links', []);
+            return `
+                <div class="dyn-card border p-6 space-y-4 rounded-3xl">
+                    <h3 class="font-bold text-amber-300 text-sm">Ajouter un lien / site d'Orientation</h3>
+                    <form onsubmit="addOrientationLink(event)" class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input type="text" id="ori-title" required placeholder="Titre (ex: Parcoursup)..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            <input type="text" id="ori-sitename" required placeholder="Nom du site..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            <input type="url" id="ori-url" required placeholder="URL directe (https://...)" class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                        </div>
+                        <input type="url" id="ori-preview" placeholder="URL de l'image d'aperçu (optionnel)..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                        <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Ajouter la ressource Orientation</button>
+                    </form>
+                    <div class="space-y-2 mt-4 max-h-64 overflow-y-auto">
+                        ${links.length > 0 ? links.map((l, i) => `
+                            <div class="p-3 bg-stone-900 rounded-xl flex justify-between items-center text-xs">
+                                <div><p class="font-bold text-amber-100">${l.title} <span class="text-amber-200/50">(${l.siteName})</span></p><a href="${l.url}" target="_blank" class="text-sky-400 truncate max-w-xs block">${l.url}</a></div>
+                                <button onclick="deleteOrientationLink(${i})" class="px-3 py-1 bg-red-600/30 text-red-300 rounded-lg font-bold">Supprimer</button>
+                            </div>
+                        `).join('') : '<p class="text-xs text-amber-200/40 italic">Aucun lien d\'orientation enregistré.</p>'}
+                    </div>
+                </div>`;
+        }
+
+        async function addOrientationLink(e) {
+            e.preventDefault();
+            let title = document.getElementById('ori-title').value.trim();
+            let siteName = document.getElementById('ori-sitename').value.trim();
+            let url = document.getElementById('ori-url').value.trim();
+            let previewImg = document.getElementById('ori-preview').value.trim();
+
+            let links = await DB.get('orientation_links', []);
+            links.push({ id: Date.now(), title, siteName, url, previewImg });
+            await DB.set('orientation_links', links);
+            showToast("Succès", "Lien d'orientation ajouté !");
+            render();
+        }
+
+        async function deleteOrientationLink(index) {
+            let links = await DB.get('orientation_links', []);
+            links.splice(index, 1);
+            await DB.set('orientation_links', links);
+            render();
+        }
+
         async function renderAdminDocs() {
             let revSheets = await DB.get('revision_sheets', []);
             let examSubjects = await DB.get('exam_subjects', []);
 
             return `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Fiches de révision -->
-                    <div class="${window.currentCardClass} p-6 space-y-4">
+                    <div class="dyn-card border p-6 space-y-4 rounded-3xl">
                         <h3 class="font-bold text-amber-300 text-sm">Ajouter une Fiche de Révision</h3>
                         <form onsubmit="uploadDocItem(event, 'revision_sheets')" class="space-y-3">
                             <input type="text" id="doc-title-rev" required placeholder="Titre de la fiche..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
-                            <input type="text" id="doc-desc-rev" placeholder="Description courte (ex: Chapitre 1)..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
-                            <input type="file" id="doc-file-rev" required accept=".pdf,image/*" class="w-full p-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white hover:file:bg-amber-500 cursor-pointer">
-                            <button type="submit" class="w-full py-2.5 ${window.currentBtnClass} text-xs">Uploader la Fiche</button>
+                            <input type="text" id="doc-desc-rev" placeholder="Description courte..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            <input type="file" id="doc-file-rev" required accept=".pdf,image/*" class="w-full p-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white cursor-pointer">
+                            <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Uploader la Fiche</button>
                         </form>
                         <div class="space-y-2 mt-4 max-h-48 overflow-y-auto">
                             ${revSheets.map((d, i) => `
@@ -874,14 +955,13 @@
                         </div>
                     </div>
 
-                    <!-- Sujets Bac / Exercices / Corrigés -->
-                    <div class="${window.currentCardClass} p-6 space-y-4">
-                        <h3 class="font-bold text-amber-300 text-sm">Ajouter un Sujet, Exercice ou Corrigé</h3>
+                    <div class="dyn-card border p-6 space-y-4 rounded-3xl">
+                        <h3 class="font-bold text-amber-300 text-sm">Ajouter un Sujet ou Corrigé</h3>
                         <form onsubmit="uploadDocItem(event, 'exam_subjects')" class="space-y-3">
-                            <input type="text" id="doc-title-exam" required placeholder="Titre (ex: Corrigé Étude de cas)..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            <input type="text" id="doc-title-exam" required placeholder="Titre..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
                             <input type="text" id="doc-desc-exam" placeholder="Description courte..." class="w-full p-3 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
-                            <input type="file" id="doc-file-exam" required accept=".pdf,image/*" class="w-full p-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white hover:file:bg-amber-500 cursor-pointer">
-                            <button type="submit" class="w-full py-2.5 ${window.currentBtnClass} text-xs">Uploader le Document</button>
+                            <input type="file" id="doc-file-exam" required accept=".pdf,image/*" class="w-full p-2 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white cursor-pointer">
+                            <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Uploader le Document</button>
                         </form>
                         <div class="space-y-2 mt-4 max-h-48 overflow-y-auto">
                             ${examSubjects.map((d, i) => `
@@ -930,49 +1010,94 @@
             render();
         }
 
-        function renderAdminPages(customPages, hiddenPages) {
-            const defaultPages = [
-                { id: 'home', title: 'Accueil & QR Code' },
-                { id: 'appreciations', title: 'Mes Appréciations' },
-                { id: 'avatar', title: 'Mon Avatar' },
-                { id: 'chat', title: 'Messagerie' },
-                { id: 'calendar', title: 'Calendrier' },
-                { id: 'quizzes', title: 'Quiz & Progrès' },
-                { id: 'orientation', title: 'Orientation' },
-                { id: 'revisions', title: 'Fiches de Révision' },
-                { id: 'exams', title: 'Sujets Bac' },
-                { id: 'notes', title: 'Bloc-Notes' }
-            ];
+        async function renderAdminAppearance() {
+            let currentBgType = await DB.get('bg_type', 'image');
+            let currentBgVal = await DB.get('bg_value', '');
+            let currentColors = await DB.get('site_colors', { btnColor: '#d97706', cardBg: 'rgba(10, 10, 10, 0.9)', borderColor: 'rgba(245, 158, 11, 0.4)' });
 
             return `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="${window.currentCardClass} p-6 space-y-4">
-                        <h3 class="font-bold text-amber-300 text-sm">Gestion des Thèmes & QR Code Accueil</h3>
-                        <div class="flex flex-col gap-3">
-                            <button onclick="toggleModal('theme-canvas-modal', true)" class="px-5 py-3 ${window.currentBtnClass} text-xs">
-                                <i class="fa-solid fa-paintbrush mr-2"></i> Créer / Appliquer un fond Canva
-                            </button>
-                            <div class="p-4 bg-stone-900 rounded-xl space-y-2">
-                                <label class="block font-bold text-amber-200 text-xs">Modifier le QR Code de l'accueil (Fichier image)</label>
-                                <input type="file" id="admin-qr-file" accept="image/*" class="w-full p-2 bg-stone-950 border border-amber-900/40 rounded-xl text-xs text-amber-100 file:py-1 file:px-3 file:rounded file:bg-amber-600 file:text-white cursor-pointer">
-                                <button onclick="uploadAdminQrFile()" class="w-full py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Mettre à jour le QR Code</button>
+                    <!-- Fonds & QR Code -->
+                    <div class="dyn-card border p-6 space-y-4 rounded-3xl">
+                        <h3 class="font-bold text-amber-300 text-sm">Arrière-plan (Image ou Vidéo) & QR Code</h3>
+                        <form onsubmit="saveBackgroundConfig(event)" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-amber-200 mb-1">Type de fond</label>
+                                <select id="admin-bg-type" class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                                    <option value="image" ${currentBgType==='image'?'selected':''}>Image / Lien Web (Canva, Unsplash...)</option>
+                                    <option value="video" ${currentBgType==='video'?'selected':''}>Vidéo en boucle (Lien MP4)</option>
+                                </select>
                             </div>
+                            <div>
+                                <label class="block text-xs font-bold text-amber-200 mb-1">URL de l'image ou de la vidéo</label>
+                                <input type="url" id="admin-bg-val" value="${currentBgVal}" required placeholder="https://..." class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            </div>
+                            <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Appliquer le Fond</button>
+                        </form>
+
+                        <div class="pt-4 border-t border-amber-900/40 space-y-2">
+                            <label class="block font-bold text-amber-200 text-xs">Mettre à jour le QR Code de l'accueil (Fichier image)</label>
+                            <input type="file" id="admin-qr-file" accept="image/*" class="w-full p-2 bg-stone-950 border border-amber-900/40 rounded-xl text-xs text-amber-100 file:py-1 file:px-3 file:rounded file:bg-amber-600 file:text-white cursor-pointer">
+                            <button onclick="uploadAdminQrFile()" class="w-full py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Mettre à jour le QR Code</button>
                         </div>
                     </div>
 
-                    <div class="${window.currentCardClass} p-6 space-y-4">
-                        <h3 class="font-bold text-amber-300 text-sm">Masquer / Afficher les pages</h3>
-                        <div class="space-y-2 max-h-80 overflow-y-auto">
-                            ${defaultPages.map(p => `
-                                <div class="p-3 bg-stone-900 rounded-xl flex justify-between items-center text-xs">
-                                    <span>${p.title} <span class="text-[10px] text-amber-200/50">(Système)</span></span>
-                                    <button onclick="toggleHidePage('${p.id}')" class="px-3 py-1 rounded-lg font-bold text-xs ${hiddenPages.includes(p.id) ? 'bg-red-600/30 text-red-300 border border-red-500/40' : 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40'}">
-                                        ${hiddenPages.includes(p.id) ? 'Masquée' : 'Visible'}
-                                    </button>
-                                </div>`).join('')}
+                    <!-- Couleurs & Musique de fond -->
+                    <div class="dyn-card border p-6 space-y-4 rounded-3xl">
+                        <h3 class="font-bold text-amber-300 text-sm">Couleurs du Site & Musique Privée</h3>
+                        <form onsubmit="saveColorsConfig(event)" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-amber-200 mb-1">Couleur principale des boutons (Bouton d'action)</label>
+                                <input type="color" id="admin-color-btn" value="${currentColors.btnColor}" class="w-full h-10 bg-stone-900 border border-amber-900/40 rounded-xl p-1 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-amber-200 mb-1">Fond des cartes / fenêtres</label>
+                                <input type="text" id="admin-color-card" value="${currentColors.cardBg}" placeholder="ex: rgba(10, 10, 10, 0.9)" class="w-full p-2.5 bg-stone-900 border border-amber-900/40 rounded-xl text-xs text-amber-100">
+                            </div>
+                            <button type="submit" class="w-full py-2.5 dyn-btn text-white font-bold rounded-xl text-xs">Appliquer les Couleurs</button>
+                        </form>
+
+                        <div class="pt-4 border-t border-amber-900/40 space-y-2">
+                            <label class="block font-bold text-amber-200 text-xs">Uploader une musique de fond (Fichier Audio)</label>
+                            <input type="file" id="admin-audio-file" accept="audio/*" class="w-full p-2 bg-stone-950 border border-amber-900/40 rounded-xl text-xs text-amber-100 file:py-1 file:px-3 file:rounded file:bg-amber-600 file:text-white cursor-pointer">
+                            <button onclick="uploadAdminAudioFile()" class="w-full py-2 bg-sky-600 text-white rounded-xl text-xs font-bold">Enregistrer la Musique</button>
                         </div>
                     </div>
                 </div>`;
+        }
+
+        async function saveBackgroundConfig(e) {
+            e.preventDefault();
+            let type = document.getElementById('admin-bg-type').value;
+            let val = document.getElementById('admin-bg-val').value.trim();
+            await DB.set('bg_type', type);
+            await DB.set('bg_value', val);
+            await applyThemeAndConfig();
+            showToast("Succès", "Arrière-plan mis à jour !");
+        }
+
+        async function saveColorsConfig(e) {
+            e.preventDefault();
+            let btnColor = document.getElementById('admin-color-btn').value;
+            let cardBg = document.getElementById('admin-color-card').value.trim();
+            let newColors = { btnColor, cardBg, borderColor: 'rgba(245, 158, 11, 0.4)' };
+            await DB.set('site_colors', newColors);
+            await applyThemeAndConfig();
+            showToast("Succès", "Les couleurs du site ont été appliquées !");
+            render();
+        }
+
+        async function uploadAdminAudioFile() {
+            let fileInput = document.getElementById('admin-audio-file');
+            if (!fileInput.files || fileInput.files.length === 0) return alert("Veuillez sélectionner un fichier audio.");
+            let file = fileInput.files[0];
+            let reader = new FileReader();
+            reader.onload = async function(e) {
+                await DB.set('bg_audio_data', e.target.result);
+                await applyThemeAndConfig();
+                showToast("Succès", "Musique de fond enregistrée ! Active-la en haut du site.");
+            };
+            reader.readAsDataURL(file);
         }
 
         async function uploadAdminQrFile() {
@@ -985,22 +1110,6 @@
                 render();
             };
             reader.readAsDataURL(fileInput.files[0]);
-        }
-
-        async function saveCanvasTheme() {
-            let name = document.getElementById('canvas-theme-name').value;
-            let bgUrl = document.getElementById('canvas-theme-bg').value;
-            if(!name || !bgUrl) return alert("Veuillez remplir le nom et l'URL de l'image.");
-
-            let customThemes = await DB.get('custom_themes', []);
-            let themeId = 'custom_' + Date.now();
-            customThemes.push({ id: themeId, name, bgUrl });
-            await DB.set('custom_themes', customThemes);
-            await DB.set('theme', themeId);
-
-            toggleModal('theme-canvas-modal', false);
-            applyTheme(themeId);
-            showToast("Thème Appliqué", "Ton fond Canva personnalisé est configuré !");
         }
 
         async function handleLogin(e) {
@@ -1021,6 +1130,7 @@
 
         async function saveSetup(e) {
             e.preventDefault();
+            let lastName = document.getElementById('s-lastname').value.trim();
             let pass = document.getElementById('s-pass').value;
             let bday = document.getElementById('s-bday').value;
 
@@ -1029,6 +1139,7 @@
             let idx = users.findIndex(u => u.username === user.username);
 
             if (idx !== -1) {
+                users[idx].lastName = lastName;
                 users[idx].password = pass;
                 users[idx].birthday = bday;
                 users[idx].mustChangePass = false;
@@ -1036,25 +1147,6 @@
                 localStorage.setItem('leqg_current_user', JSON.stringify(users[idx]));
                 render();
             }
-        }
-
-        async function updateAvatar(icon) {
-            let user = getCurrentUser();
-            let users = await DB.get('users', []);
-            let idx = users.findIndex(u => u.username === user.username);
-            if(idx !== -1) {
-                users[idx].avatar = icon;
-                await DB.set('users', users);
-                localStorage.setItem('leqg_current_user', JSON.stringify(users[idx]));
-                render();
-            }
-        }
-
-        async function toggleHidePage(pageId) {
-            let hiddenPages = await DB.get('hidden_pages', []);
-            hiddenPages = hiddenPages.includes(pageId) ? hiddenPages.filter(p => p !== pageId) : [...hiddenPages, pageId];
-            await DB.set('hidden_pages', hiddenPages);
-            render();
         }
 
         function logout() {
